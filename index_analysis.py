@@ -6,13 +6,12 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from analysis_tools import *
 
 '''
 Params
 '''
 # Params
-indexes = "TNA SPY TQQQ SPXL"
+indexes = "TNA SPY TQQQ SPXL ^IRX"
 
 # Change directory
 os.chdir('/Users/stenson/Desktop')
@@ -45,17 +44,33 @@ def max_drawdown(df, varname):
     # Return df
     return(df)
 
+def sharpe_ratio(df, varname):
+    # Calculate total return for each date
+    df['return'] = df[varname]/df[varname].shift(1)-1
+    df['return'].iloc[0] = 0
+
+    # Subtract risk free rate
+    df['sr'] = df['return'] - df['^IRX']/(100*365)
+
+    # Calculate sharpe ratio
+    sr = df['sr'].mean()/df['return'].std()*(252**.5)
+    print("Sharpe Ratio is " + str(sr))
+
+    return df
+
 '''
 Download Data
 '''
 # Download data
-df_raw = yf.download(indexes, start='2009-01-01', end='2024-04-01')
+# df_raw = yf.download(indexes, start='2009-01-01', end='2024-04-01')
 
 # Flatten df 
-df = df_raw.xs('Adj Close', axis=1, level=0, drop_level=True)
+dfs = df_raw.xs('Adj Close', axis=1, level=0, drop_level=True)
 
 '''
 Run tools
 '''
-varname = 'TQQQ'
-max_drawdown(df[[varname]], varname)
+
+varname = 'SPXL'
+max_drawdown(dfs[[varname]], varname)
+test = sharpe_ratio(dfs, varname)
