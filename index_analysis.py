@@ -62,7 +62,7 @@ def sharpe_ratio(df, varname):
 Download Data
 '''
 # Download data
-# df_raw = yf.download(indexes, start='2009-01-01', end='2024-04-01')
+df_raw = yf.download(indexes, start='2009-01-01')
 
 # Flatten df 
 dfs = df_raw.xs('Adj Close', axis=1, level=0, drop_level=True)
@@ -71,6 +71,6 @@ dfs = df_raw.xs('Adj Close', axis=1, level=0, drop_level=True)
 Run tools
 '''
 
-varname = 'SPXL'
+varname = 'TQQQ'
 max_drawdown(dfs[[varname]], varname)
 test = sharpe_ratio(dfs, varname)
