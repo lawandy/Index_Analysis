@@ -36,6 +36,11 @@ def max_drawdown(df, varname):
     # Calculate max drawdown
     df['max_drawdown']= (df['wealth_index']-df['prev_peak'])/df['prev_peak']
 
+    # Remove max drawdown if too small without collapsing dataset
+    tempdf = df.groupby('prev_peak')['max_drawdown']
+    df['min'] = tempdf.transform('min')
+    df.loc[(df['min'] > -0.05), 'max_drawdown'] = 0
+
     # Plot 
     plt.plot(df['max_drawdown'])
     plt.xlabel(varname)
@@ -62,7 +67,7 @@ def sharpe_ratio(df, varname):
 Download Data
 '''
 # Download data
-df_raw = yf.download(indexes, start='2009-01-01')
+# df_raw = yf.download(indexes, start='1990-01-01')
 
 # Flatten df 
 dfs = df_raw.xs('Adj Close', axis=1, level=0, drop_level=True)
@@ -72,5 +77,11 @@ Run tools
 '''
 
 varname = 'TQQQ'
-max_drawdown(dfs[[varname]], varname)
-test = sharpe_ratio(dfs, varname)
+
+sharpe_ratio(dfs, varname)
+
+test = max_drawdown(dfs[[varname]], varname)
+mindf = test.groupby("prev_peak").min()
+mindf = mindf[mindf['max_drawdown'] != 0]
+np.mean(mindf.max_drawdown)
+np.median(mindf.max_drawdown)
