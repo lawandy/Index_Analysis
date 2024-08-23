@@ -23,14 +23,16 @@ def sharpe_ratio(df):
 
     # Calculate sharpe ratio
     mean = df['sr'].mean()
+    amean = (1 + mean)** 252 - 1
     std = df['return'].std()
+    astd = std *(252**.5)
     sr = mean/std*(252**.5)
 
     # CAGR
     days = (df.index.values[-1]-df.index.values[0]).astype('timedelta64[D]')// np.timedelta64(1, 'D')
     cagr = (df['value'].iloc[-1]/df['value'].iloc[0])**(1/(days/365)) - 1
     
-    return pd.DataFrame({'mean': [mean], 'std': [std], 'sr':[sr], 'cagr': [cagr]})
+    return pd.DataFrame({'mean': [amean], 'std': [astd], 'sr':[sr], 'cagr': [cagr]})
 
 # Construct portfolio weights
 def construct_pw (indexes, pw):
@@ -98,7 +100,7 @@ rebalanceperiod = 90
 os.chdir('/Users/stenson/Desktop')
 
 # Download data
-# df_raw = yf.download(indexes, start='2024-05-01')
+df_raw = yf.download(indexes, start='2010-02-09')
 
 # Flatten df 
 dfs = df_raw.xs('Adj Close', axis=1, level=0, drop_level=True)
