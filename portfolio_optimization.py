@@ -22,11 +22,11 @@ def sharpe_ratio(df):
     df['sr'] = df['return'] - df['^IRX']/(100*365)
 
     # Calculate sharpe ratio
-    mean = df['sr'].mean()
-    amean = (1 + mean)** 252 - 1
+    mean = df['return'].mean()
+    amean = (1 + mean)**252 - 1
     std = df['return'].std()
     astd = std *(252**.5)
-    sr = mean/std*(252**.5)
+    sr = df['sr'].mean()/std*(252**.5)
 
     # CAGR
     days = (df.index.values[-1]-df.index.values[0]).astype('timedelta64[D]')// np.timedelta64(1, 'D')
@@ -56,6 +56,7 @@ def construct_portfolio(df, wt, rebalanceperiod):
 
     # Calculate rebalance
     df['value'] = 100
+
     for i in range(len(df)):
         
         for stock, weight in wt.items():
@@ -88,19 +89,24 @@ def convert_yield_to_rs (df, var):
     for i in range(1, len(df)-1):
         days = (df.index.values[i+1]-df.index.values[i]).astype('timedelta64[D]')// np.timedelta64(1, 'D')
         df.iloc[i, df.columns.get_loc(var + "_cs")] = df[var + "_cs"].iloc[i-1] * (1+df['^IRX'].iloc[i]/365)**days
+    
+    df[var + "_raw"] = df[var]
+    df[var] = df[var + "_cs"]
+    df = df.drop(var + '_cs', axis=1)
+
     return df
 
 ''' Run Program '''
 
 # Params
 indexes = "SPY TQQQ ^IRX"
-rebalanceperiod = 90
+rebalanceperiod = 63
 
 # Change directory
 os.chdir('/Users/stenson/Desktop')
 
 # Download data
-df_raw = yf.download(indexes, start='2010-02-09')
+df_raw = yf.download(indexes, start='2010-03-01')
 
 # Flatten df 
 dfs = df_raw.xs('Adj Close', axis=1, level=0, drop_level=True)
@@ -118,9 +124,9 @@ dfs = convert_yield_to_rs(dfs, "^IRX")
 indexes_list = [i for i in indexes.split(' ')]
 for index in indexes_list:
     if index == indexes_list[0]:
-        wts = pd.DataFrame(np.arange(0.0, 1.0, 0.05), columns=[index])
+        wts = pd.DataFrame(np.arange(0, 1.05, 0.05), columns=[index])
     else:
-        wts = wts.merge(pd.DataFrame(np.arange(0.0, 1.0, 0.05), columns=[index]), how = 'cross')
+        wts = wts.merge(pd.DataFrame(np.arange(0, 1.05, 0.05), columns=[index]), how = 'cross')
 
 # Drop if weights don't sum to 1
 wts = wts[wts.sum(axis=1, numeric_only=True) == 1]
@@ -130,19 +136,29 @@ stats = []
 
 # Iterate through weights
 for i in range(len(wts)):
+# for i in range(3):
 
     # Create weight
     wt = wts.iloc[i].to_dict()
-    # wt = {'SPY': 0.45, 'TQQQ': 0.45, '^IRX_cs': 0.1}
+    #wt = {'SPY': 0.05, 'TQQQ': 0.0, '^IRX': 0.95}
 
     # Construct portfolio
     df = construct_portfolio(dfs, wt, rebalanceperiod)
 
+    # Get sharpe ratio
+    sr_temp = sharpe_ratio(df)
+
+    # print(wt)
+    # print(sr_temp)
+
     # Return stats
-    stats.append(pd.DataFrame([wt]).merge(sharpe_ratio(df), how = "cross"))
+    stats.append(pd.DataFrame([wt]).merge(sr_temp, how = "cross"))
 
 # Merge stats into dataframe
 stats = pd.concat(stats)
+
+# Write stats
+stats.to_excel('stats.xlsx')
 
 # Next steps
 # (1) Reconstruct TQQQ index for further backtest
